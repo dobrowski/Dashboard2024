@@ -1,0 +1,889 @@
+---
+title: "`r params$dist` Dashboard Summary"
+format: 
+    html:
+        theme: pulse
+        embed-resources: true
+        page-layout: full
+        include-in-header:
+            - file: google-analytics.html
+editor: visual
+toc: true
+toc-location: left
+params:
+    dist: '27660506026124'
+    yr: 2023
+---
+
+```{r}
+#| include: false
+
+library(here)
+library(rmarkdown)
+library(knitr)
+library(tidyverse)
+library(glue)
+library(readxl)
+library(MCOE)
+library(ggthemes)
+library(reactable)
+library(googlesheets4)
+library(RColorBrewer)
+library(ggtext)
+library(glue)
+library(scales)
+library(DT)
+
+
+options(scipen=999)
+
+#cds.school <- "27659616025993"
+
+cds.school <- params$dist
+
+cds.dist <- paste0(str_sub(cds.school,1,7),"0000000")
+
+dist.name <- mcoe_name(cds.dist)
+
+
+yr <- params$yr
+
+con <- MCOE::mcoe_sql_con()
+
+sheet_id <- "https://docs.google.com/spreadsheets/d/1_EmvLQq-cUe8Ist_WYGJFgdjD27dajpfSbEd_djvbsc/edit#gid=0"
+
+
+purp.pal <- c( "5" ='#eeeeee',"4" ='#d9d2e9', "3" ='#9383bc',"2" ='#6c3f97',"1" ='#3b096b', "NA" = "#FFFFFF")
+
+color.pal <- c( "firebrick", "chocolate1", "gold1", "springgreen3", "royalblue3")
+
+bw.pal <- c("white" = "white", "black" = "black")
+
+da.pal <- c("DA" = "red", "Not"= "black")
+
+
+# Loads Dash.graph and indicatorbar2
+source("dashboard-function.R", local = knitr::knit_global())
+
+dash.mry <- read_rds("dash-mry.rds")
+
+dash.mry.da.details <- read_rds("dash_mry_da_details.rds")
+
+exit.crit <- read_rds("exit-crit.rds")
+
+essa_mry <- read_rds("essa_mry.rds")
+
+atsi.list <- read_rds("atsi_list.rds")
+
+school.name <- dash.mry %>%
+    filter(cds == cds.school) %>%
+    select(schoolname) %>% 
+    distinct() %>%
+    unlist()
+
+
+```
+
+```{r}
+#| include: false
+
+dash.old <- tbl(con,"DASH_ALL") %>%
+     filter(countyname == "Monterey",
+   #        rtype == "D",
+    #       cds == dist
+           ) %>%
+    collect () %>%
+    mutate(cds = as.numeric(cds)) %>%
+    filter(cds == cds.school) # %>%
+ #    left_join(studentgroup.tbl) %>%
+ # #   left_join_codebook("DASH_SUSP", "studentgroup") %>%
+ #    mutate(definition = recode(definition, "Student Group" = "English Learner")) %>% 
+ #    rename(studentgroup.long = definition)
+
+
+# 
+# 
+# school_dir <- tbl(con, "SCHOOL_DIR") %>%
+#     collect() %>%
+#     rename("cds" = "cds_code")
+# 
+# 
+# school.name <- school_dir %>%
+#     filter(cds == cds.school)  %>%
+#     select(school) %>%
+#     unlist()
+# 
+# 
+# 
+# dash.mry <- dash2 
+# 
+# 
+# 
+# ### Determine DA eligibility --------
+# 
+# 
+# add_cols <- function(df, cols) {
+#   add <- cols[!cols %in% names(df)]
+#   if(length(add) !=0 ) df[add] <- NA
+#   return(df)
+# }
+# 
+# 
+# 
+# da.list <- dash.mry  %>%
+#     filter(cds == cds.dist) %>%
+#     select(districtname, studentgroup, statuslevel, indicator) %>%
+#     pivot_wider(id_cols = c(districtname,studentgroup),
+#                 names_from = indicator,
+#                 values_from = statuslevel
+#     ) %>%
+#     add_cols(c("grad","chronic")) %>%
+#     transmute(districtname, 
+#               studentgroup,
+#               priority4 = case_when(ela == 1 & math == 1 ~ TRUE,
+#                                     elpi == 1 ~ TRUE,
+#                                     TRUE ~ FALSE),
+#               priority5 = case_when(grad == 1 ~ TRUE,
+#                                     chronic == 1 ~ TRUE,
+#                                     TRUE ~ FALSE),
+#               priority6 = case_when(susp == 1 ~ TRUE,
+#                                     TRUE ~ FALSE),
+#               DA.eligible  = case_when(priority4+priority5+priority6 >=2 ~ "DA",
+#                                        TRUE ~ "Not")
+#     )
+# 
+# dash.mry.da <- left_join(dash.mry, da.list)
+# 
+# 
+# da.groups <- dash.mry.da %>%
+#     filter(DA.eligible == "DA",
+#            statuslevel.orig == 1) %>%
+#     select(studentgroup) %>%
+#     unique() %>%
+#     unlist()
+# 
+# 
+# da.inds <- dash.mry.da %>%
+#     filter(DA.eligible == "DA",
+#            statuslevel.orig == 1) %>%
+#     select(indicator) %>%
+#     filter(indicator != "censusenrollrates") %>%
+#     unique() %>%
+#     unlist()
+# 
+# 
+# dash.mry.da.school <- dash.mry.da %>%
+#     filter(cds == cds.school)
+# 
+# 
+# dash.mry.da.dist <- dash.mry.da %>%
+#     filter(cds == cds.dist)
+# 
+# 
+# 
+# da.inds.overlap <- dash.mry.da.school %>%
+#     filter(!is.na(currstatus)) %>%
+#     select(indicator) %>%
+#     unique() %>%
+#     unlist() %>%
+#     intersect(da.inds)
+# 
+# ### Build historic table -----
+# 
+# 
+# dash.old2 <- dash.old %>%
+#     select(cds = CDSCode,reportingyear = year, studentgroup, indicator = ind, currstatus, studentgroup.long) %>%
+#     mutate(cds = as.character(cds),
+#            reportingyear = as.numeric(reportingyear))
+# 
+# 
+# dash.hist <- dash.mry.da.school %>%
+#     bind_rows(dash.old2) %>%
+#     filter(cds == cds.school)
+# 
+# 
+# ### Determine ATSI eligibility -----
+# 
+# 
+# 
+# atsi.cde <- read_xlsx(here("data","essaassistance22rev.xlsx"),
+#                       sheet = "2022-23 ESSA State Schools",
+#                       range = "A3:AF9946" )
+# 
+# 
+# 
+# atsi.cde.mry <- atsi.cde %>%
+#     filter(countyname == "Monterey",
+#            AssistanceStatus2022 == "ATSI") %>%
+#     pivot_longer(cols = AA:WH) %>%
+#     filter(value > 0)
+# 
+# 
+# 
+# atsi <- dash2 %>%
+#     filter(str_starts(cds,"27"),
+#            rtype == "S",
+#            indicator != "censusenrollrates",
+#        #    studentgroup == "ALL",
+#            statuslevel != 0
+#     ) %>%
+#     pivot_wider(id_cols = c(cds, districtname,schoolname, studentgroup), names_from = indicator, values_from = c(statuslevel, currstatus)   ) %>%
+#         add_cols(c("statuslevel_ela",
+#            "statuslevel_math",
+#            "statuslevel_elpi",
+#            "statuslevel_susp",
+#            "statuslevel_grad",
+#            "statuslevel_chronic")) %>%
+# 
+# #    left_join(elpi.sch) %>%
+# #    left_join(title1) %>%
+#     
+#     rowwise() %>%
+#     mutate(num.ind =  sum(!is.na(c_across(starts_with("status")))) ,
+#            sum.ind =  sum(c_across(starts_with("status")), na.rm = TRUE ),
+#            num.1s =  sum(c_across(starts_with("status")) == 1, na.rm = TRUE ),
+#            # atsi.grad = case_when(currstatus_grad <= 68 ~ "Grad",
+#            #                      TRUE ~ "No"),
+#            atsi.all =  ifelse(num.ind == sum.ind,"All Indicators at Lowest Status", "No"),
+#            atsi.but.1 =  ifelse(num.ind  - num.1s == 1 & num.1s > 0 ,"All but one Indicator at Lowest Status", "No"),
+#          #  atsi.majority = case_when(num.ind >= 5  & num.1s >= ceiling(num.ind/2 ) ~ "Majority", TRUE ~ "No")
+#     ) %>%
+#     arrange(cds) %>%
+#     #    mutate(csi = ifelse( (csi.all == "No" & csi.grad == "No"), FALSE, TRUE) 
+#     mutate(atsi = ifelse( (atsi.all == "No" 
+#                       #     &  atsi.grad == "No" 
+#                            &  atsi.but.1 == "No" 
+#                       #     &  atsi.majority == "No"
+#                            ),
+#                           FALSE, TRUE) 
+#            
+#     )
+# 
+# 
+# atsi.mry <- atsi %>%
+#     filter(str_starts(cds,"27"),
+#   #         atsi == TRUE
+#     ) %>%
+#     select(cds, studentgroup, starts_with("status"), starts_with("atsi")) %>%
+#     mutate(name = recode(studentgroup,
+#                                  "MR" = "TOM",
+#                           #       "ELO" = "EL"
+#                          )
+#            )
+# 
+# 
+# atsi.joint <- atsi.cde.mry %>%
+#     left_join(atsi.mry) %>%
+#     mutate(across(starts_with("atsi"), ~ na_if(.x ,"No")  )) %>%
+#     mutate(
+#         atsi.reason = coalesce(atsi.all
+#                                ,atsi.but.1
+#                          #      , atsi.majority
+#                                )
+#     ) %>%
+#     left_join(studentgroup.tbl) %>%
+#     select(cds, schoolname, definition, atsi.reason, starts_with("status"))
+#     
+```
+
+```{r}
+#| include: false
+
+### Graphs -------
+
+
+# 
+# dash.graph <- function(df, dist, school) {
+#     
+# 
+#     df %>%
+#         filter(str_detect(districtname,dist),
+#                str_detect(schoolname,school),
+#                statuslevel !=0,
+#                !is.na(studentgroup.long)
+#                ) %>%
+#     ggplot() +
+#         geom_tile(aes(y = reorder(studentgroup.long, desc(studentgroup.long)),  # Student group
+#                       x = as.factor(indicator2),  # Indicator
+#                       fill = factor(statuslevel, levels = c("1","2","3","4","5")),   # Status rating
+#                      # color = "black",  # as.factor(`DA Eligible`), 
+#                       width=0.95, # width and heigth are adjusted to allow the color borders to go fully around
+#                       height=0.95
+#         ),
+#         lwd = .75,
+#         color = "black"
+#         )  +
+#         ggthemes::theme_hc() +
+#     ggplot2::theme(plot.title.position = "plot")    +
+#         
+#         theme(axis.text.x = element_markdown(color = "black", size = 11) ) +
+#         scale_fill_manual(values = purp.pal,
+#                           drop = FALSE) +
+#   #      scale_color_manual( values = da.pal) +
+#         labs(title = paste0("2022 Dashboard Status by Student Group for ",school),
+#              x = "",
+#              y = ""
+#         )  +
+#         guides(fill = guide_legend(title = "Dashboard Status \nCell Phone Bars",
+#                             title.position = "top",
+#                             title.hjust = .5,
+#                             label.position = "bottom",
+#                             nrow = 1
+#                             )
+#         ) +
+#         theme(legend.key.size = unit(2, 'cm' ))
+# 
+# }
+# 
+# 
+# dash.graph.da <- function(df, dist) {
+#     
+# 
+#     df %>%
+#         filter(str_detect(districtname,dist),
+#                statuslevel !=0,
+#                !is.na(studentgroup.long)
+#         ) %>%
+#         mutate(`DA Eligible` = ifelse(DA.eligible =="DA" & statuslevel == 1 & studentgroup != "ALL", "DA", "Not"),
+#                studentgroup.long = ifelse( DA.eligible=="DA" & studentgroup != "ALL",
+#                                     glue("<span style='color:red'>{studentgroup.long}</span>"),
+#                                     glue("<span style='color:black'>{studentgroup.long}</span>") # Used to make the axis labels red for DA groups
+#                )
+#                ) %>%
+#         ggplot() +
+#         geom_tile(aes(y = reorder(studentgroup.long, desc(studentgroup.long)),  # Student group
+#                       x = as.factor(indicator2),  # Indicator
+#                       fill = factor(statuslevel, levels = c("1","2","3","4","5")),   # Status rating
+#                        color = as.factor(`DA Eligible`), 
+#                       width=0.95, # width and height are adjusted to allow the color borders to go fully around
+#                       height=0.95
+#         ),
+#         lwd = .75,
+#  #       color = "black"
+#         )  +
+#         ggthemes::theme_hc() +
+#         #           geom_text(size = 2, position = position_dodge(width = 1)),
+#         ggplot2::theme(plot.title.position = "plot") +
+#         theme(axis.text.x = element_markdown(color = "black", size = 11) ) +  # For Icons on axis
+#         
+#         scale_fill_manual(values = purp.pal,
+#                           drop = FALSE) +
+#         scale_color_manual( values = da.pal) +
+#         labs(title = paste0("2022 Dashboard Status by Student Group for ",dist),
+#              x = "",
+#              y = ""
+#         )  +
+#         guides(color = guide_legend(title = "DA Eligible\n",   # Prettify the legends
+#                                          title.position = "top",
+#                                         title.hjust = .5,
+#                                          label.position = "bottom"
+#              ),
+#             fill = guide_legend(title = "Dashboard Status \nCell Phone Bars",
+#                                 title.position = "top",
+#                                 title.hjust = .5,
+#                                 label.position = "bottom",
+#                                 nrow = 1)
+#         ) +
+#         theme(legend.key.size = unit(1.5, 'cm' )) +
+#      theme(axis.text.y = element_markdown())   # Used to make the axis labels red for DA groups
+#     
+#     # ggsave(here("figs",glue("{dist} Dashboard Status 2022 - {Sys.Date()}.png")),
+#     #        width = 8, height = 8)
+#     # 
+# }
+# 
+# 
+# indicator.bar.school <- function(df, dist, schooly, indie) {
+#     
+#     
+#     tit <- case_when(indie == "math" ~ "<img src='icons/2math.png' width='40' /> Math",
+#                      indie == "chronic" ~ "<img src='icons/5chronic.png' width='40' /> Chronic Absenteeism",
+#                      indie == "grad" ~ "<img src='icons/4grad.png' width='40' /> Graduation Rate",
+#                      indie == "elpi" ~ "<img src='icons/3elpi.png' width='40' /> English Languague Progress (ELPI)",
+#                      indie == "ela" ~ "<img src='icons/1ela.png' width='40' /> ELA",
+#                      indie == "susp" ~ "<img src='icons/6suspend.png' width='40' /> Suspension",
+#                      TRUE ~ indie) 
+#     
+#     subtit <- case_when(indie == "math" ~ "Points represent average Distance from Standards",
+#                      indie == "chronic" ~ "Percentage of students missing at least 10% of days",
+#                      indie == "grad" ~ "Percentage of four-year cohort graduates",
+#                      indie == "elpi" ~ "Percentage of EL that improve on the ELPAC",
+#                      indie == "ela" ~ "Points represent average Distance from Standards",
+#                      indie == "susp" ~ "Percentage of students Suspended at least 1 full day",
+#                      TRUE ~ indie) 
+#     
+#     
+# eil_code <-    school_dir %>%
+#         filter( str_detect(district,dist),
+#                str_detect(school,schooly)
+#                ) %>%
+#     select(eil_code)%>% 
+#     distinct() %>%
+#     unlist()
+#     
+# # 10 County Community
+# # 60,61, 63 & eil_code == "ELEM"    Elementary. "INTMIDJR"
+# # 62 Middle School
+# # 66, 68, 63 & eil_code == "HS"  High School
+# # 09 SPED
+# # 69 Community Day School
+# # 70 Adult Ed
+# 
+#     verts <- case_when(indie == "math" & eil_code %in% c("ELEM","INTMIDJR") ~ c(-95,-25,0,35),
+#                        indie == "math" & eil_code %in% c("HS") ~ c(-115,-60,0,25),
+#                         indie == "chronic" ~ c(20,10,5,2.5),
+#                         indie == "grad" ~ c(95,90.5,80,68),
+#                         indie == "elpi" ~ c(65,55,45,35),
+#                         indie == "ela" & eil_code %in% c("ELEM","INTMIDJR") ~ c(-70,-5,10,45),
+#                        indie == "ela" & eil_code %in% c("HS") ~ c(-45,0,30,75),
+#                        indie == "susp" & eil_code %in% c("ELEM") ~ c(6.0,3.0,1.0,0.5),
+#                        indie == "susp" & eil_code %in% c("INTMIDJR") ~ c(12.0,8.0,2.0,0.5),
+#                        indie == "susp" & eil_code %in% c("HS") ~ c(10.0,6.0,1.5,0.5)
+#                        ) 
+#     
+#  
+#     df %>%
+#         filter(str_detect(districtname,dist),
+#                str_detect(schoolname,schooly),
+#                 indicator == indie,
+#                !is.na(currstatus),
+#  #               statuslevel != 0,
+#                 !is.na(studentgroup.long)) %>%
+#                 mutate(`DA Eligible` = ifelse(DA.eligible =="DA" & statuslevel == 1 & studentgroup != "ALL", "DA", "Not"),
+#                studentgroup.long = ifelse( DA.eligible=="DA" & studentgroup != "ALL",
+#                                     glue("<span style='color:red'>{studentgroup.long}</span>"),
+#                                     glue("<span style='color:black'>{studentgroup.long}</span>") # Used to make the axis labels red for DA groups
+#                )
+#                ) %>%
+#         mutate(shifty = ifelse(currstatus >0, 1, -.05 ) ,
+#                labby = case_when(indie == "math" ~ as.character(currstatus),
+#                                  indie == "ela" ~ as.character(currstatus),
+#                                  TRUE ~ percent(accuracy = 0.1, x = currstatus/100)),
+#                labby.col = ifelse(statuslevel.orig < 4, "white", "black")
+#                ) %>%
+#         ggplot( aes(x = reorder(studentgroup.long, currstatus ),
+#                     y = currstatus,
+#                     fill = factor(statuslevel.orig, levels = c("1","2","3","4","5")),
+#                     label = labby)
+#         ) + 
+#         geom_col() +
+#         geom_text(position = position_dodge2(width = 1),
+#                   aes(hjust =  shifty, color = labby.col)
+#         ) +
+#         geom_hline(yintercept = verts, linetype = "longdash" ) +
+#         coord_flip() +
+#         ggthemes::theme_hc() +
+#         ggplot2::theme(plot.title.position = "plot",
+#                        plot.title = element_markdown(size = 15)) +
+#         scale_color_manual(guide = "none", values = bw.pal) +
+#         scale_fill_manual(values = purp.pal,
+#                           drop = FALSE) +
+#         labs(title = paste0(tit," by Student Group<br> for ",schooly),
+#              subtitle = subtit,
+#              x = "",
+#              y = ""
+#         )  +
+#         guides(fill = guide_legend(title = "Dashboard Status \nCell Phone Bars",
+#                                    title.position = "top",
+#                                    title.hjust = .5,
+#                                    label.position = "bottom",
+#                                    nrow = 1)
+#         ) +
+#         theme(legend.key.size = unit(1.5, 'cm' )) +
+#      theme(axis.text.y = element_markdown())   # Used to make the axis labels red for DA groups
+#     
+# }
+# 
+# hist.lines <- function(group, indie){
+#     
+#     
+#     
+#     tit <- paste0( case_when(indie == "math" ~ "<img src='icons/2math.png' width='40' /> Math",
+#                      indie == "chronic" ~ "<img src='icons/5chronic.png' width='40' /> Chronic Absenteeism",
+#                      indie == "grad" ~ "<img src='icons/4grad.png' width='40' /> Graduation Rate",
+#                      indie == "elpi" ~ "<img src='icons/3elpi.png' width='40' /> English Languague Progress (ELPI)",
+#                      indie == "ela" ~ "<img src='icons/1ela.png' width='40' /> ELA",
+#                      indie == "susp" ~ "<img src='icons/6suspend.png' width='40' /> Suspension",
+#                      TRUE ~ indie) ,
+#                             " Historical Rates for ",
+#                             school.name)
+#     
+#     
+#     
+#     
+#     dash.hist %>%
+#         filter(studentgroup %in% group,
+#                indicator == indie) %>%
+#         mutate(status = case_when(indie == "math" ~ currstatus,
+#                      indie == "chronic" ~ currstatus/100,
+#                      indie == "grad" ~ currstatus/100,
+#                      indie == "elpi" ~ currstatus/100,
+#                      indie == "ela" ~ currstatus,
+#                      indie == "susp" ~ currstatus/100)) %>%
+#     ggplot(aes(y = status,
+#                group = studentgroup.long,
+#                x = reportingyear,
+#                color = studentgroup.long)) +
+#         geom_line(linewidth = 2) +
+#         geom_point(size = 3)  +
+#         mcoe_theme +
+#         scale_color_few() + 
+#         ggplot2::theme(plot.title.position = "plot",
+#                        plot.title = element_markdown(size = 15)) +
+#         {if(indie %notin% c("ela","math"))scale_y_continuous(breaks = scales::breaks_extended(8),
+#                            labels = scales::percent,
+#                            expand = expansion(c(0.1, 0.1))
+#                            )} +
+#   labs(title = tit,
+#        #      caption = "https://www.cde.ca.gov/ta/ac/cm/index.asp",
+#              color = "")
+#     
+#     
+# }
+
+
+
+```
+
+---
+title: "`r school.name` Dashboard Summary"
+---
+
+## Report Purpose
+
+This report is created to assist `r school.name` in reflecting on their student groups and how they relate to DA, CSI, and ATSI.
+
+## Qualifying Groups
+
+Differentiated Assistance is determined by the California Dashboard. Colors reflect the latest available status from 2023.
+
+```{r} 
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+
+http_address <- glue::glue("https://www.caschooldashboard.org/reports/{cds.dist}/{yr}")
+
+cat("The graphic below shows the color for each student group for each indicator for ",dist.name," from the [California Dashboard", yr, "](", http_address, ")")
+
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| include: true
+#| fig-width: 7
+#| fig-height: 8
+
+dash.mry %>%
+ #       mutate(statuslevel = statuslevel.orig) %>%
+    dash.graph(dist.name, grouping = "D") 
+
+```
+
+
+```{r} 
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+
+http_address <- glue::glue("https://www.caschooldashboard.org/reports/{cds.school}/{yr}")
+
+cat("The graphic below shows the color for each student group for each indicator for ",school.name," from the [California Dashboard", yr, "](", http_address, ")", " The school level results contributed to ",dist.name," overall.")
+
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 7
+#| fig-height: 8
+
+dash.mry %>%
+ #       mutate(statuslevel = statuslevel.orig) %>%
+    dash.graph(school.name, grouping = "S") 
+
+```
+
+## CSI/ATSI Designations
+
+Under ESSA, schools can be identified for Comprehensive Support and Improvement (CSI) or Additional Targeted Support and Improvement (ATSI). CSI is based on a school's overall or All Students indicators, whereas ATSI is based on each student group's indicators. For more information please see: [CDE School Support](https://www.cde.ca.gov/sp/sw/t1/schoolsupport.asp). It is important to note that calculations are only based on student groups with 30 or more students.
+
+```{r}
+#| echo: false
+#| message: false
+
+essa.tbl <- essa_mry %>%
+    filter(cds == cds.school) 
+
+
+atsi.who <- atsi.list %>%
+    filter(cds == cds.school)
+
+atsi.words <- if ( length( atsi.who$definition) > 0 ) paste0(combine_words( atsi.who$definition), " students have been identified as meeting ATSI criteria.") else paste0(" ")
+
+
+# %>%
+    # select(schoolname,
+    #        definition,
+    #        atsi.reason,
+    #        statuslevel_ela,
+    #        statuslevel_math,
+    #        statuslevel_elpi,
+    #        statuslevel_chronic,
+    #        statuslevel_grad,
+    #        statuslevel_susp)
+
+# 
+# 
+# # atsi.need <- 
+#      if ( length( atsi.tbl$definition) > 0 ) {
+#     datatable(atsi.tbl,
+#           colnames = c(#"Row Number" ,
+#                        "School" ,
+#                        "Student Group",
+#                        "Reason for ATSI", 
+#                       "ELA Status",
+#                       "Math Status", 
+#                        "ELPI Status", 
+#                        "Chronic Absenteeism Status" ,
+#                        "Graduation Status",
+#                        "Suspension Status"
+#                        ),
+#           caption = "Student Groups Qualifying for ATSI on 2022 Dashboard",
+#           rownames = FALSE,
+# 
+#           options = list(#pageLength = 10,
+#                          lengthChange = FALSE,
+#                          searching = FALSE,
+#                          dom = 't',
+#                          columnDefs = list(list(className = 'dt-center', targets = "_all"))
+#                          ),
+#             )      } 
+# 
+#    
+
+
+```
+
+`r if_else (length( essa.tbl$cds) == 0, paste0(school.name," is not eligible for ATSI or CSI."), paste0(school.name," is eligible for ",essa.tbl$AssistanceStatus2023,".") )`
+
+`r atsi.words`
+
+## Status Details for all Indicators
+
+These graphs represent all of the indicators from the Dashboard and show how each of the student groups performed.
+
+<details>
+
+<summary>[**Click here to display graphs**]{style="color:purple;"}</summary>
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 7
+#| fig-height: 8
+
+
+indicator.list <- dash.mry %>%
+        filter(cds == cds.school,
+               !is.na(currstatus)) %>%
+    select(indicator) %>%
+    filter(!str_detect(indicator,"CENSUS")) %>%
+    unique() %>%
+    unlist()
+
+for (i in indicator.list) {
+
+p <- indicator.bar2(dash.mry, school.name, grouping = "S", i)+
+  theme(plot.margin = margin(t = 5, r = 10, b = 5, l = 5, unit = "pt"))
+    
+print(p)
+
+}    
+
+
+
+```
+
+</details>
+
+## Historical Graphs for Eligible Groups
+
+These graphs represent all of the indicators from Priority Areas that qualified the district for DA or school for ATSI. They included all DA qualifying student groups and student groups qualify for ATSI on each graph. In addition, the All Students group is included in all graphs for comparisons.
+
+<details>
+
+<summary>[**Click here to display graphs**]{style="color:purple;"}</summary>
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 7
+#| fig-height: 6
+
+
+da.inds <- dash.mry.da.details %>%
+    filter(cds == cds.dist) %>%
+    select(indicator) %>%
+    filter(indicator != "CCI") %>% # Only for 2023 since no history to compare
+    unique() %>%
+    unlist()
+
+
+
+da.groups <- dash.mry.da.details %>%
+    filter(cds == cds.dist) %>%
+    select(studentgroup) %>%
+    unique() %>%
+    unlist()
+
+
+csi.list <- dash.mry %>%
+    filter(cds %in% essa.tbl$cds,
+        reportingyear == 2023,
+           rtype == "S",
+           color == 1,
+           (studentgroup == "ALL" | indicator == "ELPI")
+           )
+
+atsi.mry <- essa.tbl %>%
+    filter( str_detect(AssistanceStatus2023, "ATSI")) %>%
+    pivot_longer(cols = AA:WH, names_to = "studentgroup") %>%
+    select(cds, districtname, schoolname, studentgroup, value) %>%
+    filter(value >= 1) %>%
+    select(-value)
+
+atsi.dash <- dash.mry %>%
+    filter(reportingyear == max(reportingyear) ,
+           cds %in% atsi.mry$cds,
+            !is.na(indicator) ) %>%
+    select(cds, studentgroup, indicator, color, statuslevel) %>%
+    mutate(color = case_when(indicator == "CCI" & statuslevel == 1 ~ 1, 
+                              indicator == "CCI" & statuslevel != 1 ~ 0,
+                              TRUE ~ color)
+           ) %>%
+    filter(color >= 1)
+
+
+
+
+
+atsi.groups <- atsi.mry %>%
+    select(studentgroup) %>%
+    distinct() %>%
+    unlist()
+
+da.atsi.groups <- c(da.groups,atsi.groups) %>% unique()
+
+
+da.atsi.inds <- c(csi.list$indicator, atsi.dash$indicator, da.inds) %>% unique()
+
+
+dash.mry.school <- dash.mry %>%
+    filter(cds == cds.school)
+
+
+for (i in da.atsi.inds) {
+    
+p <- hist.lines(df = dash.mry.school,
+                group = c("ALL",da.atsi.groups),
+                indie = i)
+
+print(p)    
+
+}
+
+
+
+
+
+```
+
+</details>
+
+## Status Needed to Avoid Red in 2024
+
+This section estimates the limits for indicators to receive an orange or higher color next year on the 2024 Dashboard. The thresholds below are based on the [5x5 grids last approved by the State Board of Education](https://www.cde.ca.gov/ta/ac/cm/fivebyfivecolortables19.asp#AcademicTable) and the number of students in the 2023 calculation. State policies may change and the student counts may shift. Only student groups in DA and their qualifying indicators for `r dist.name` are included below and only if they are in the lowest status for `r school.name`. The thresholds represent the numbers for `r school.name`.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+
+
+
+thresh.df <- exit.crit %>%
+    filter(cds == cds.school)
+
+
+thresh.tbl <- thresh.df %>% 
+    mutate(change = thresh - currstatus) %>%
+    select(studentgroup.long, indicator, currstatus, thresh, change, pass.count)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+datatable(thresh.tbl,
+          colnames = c("Student Group", "Indicator", "Current Status", "Target Status for Orange", "Change Needed", "Number of Students (as applicable)"),
+          caption = "Change in Indicators Needed to Avoid Red in 2023",
+          rownames = FALSE,
+          options = list(lengthChange = FALSE,
+                         searching = FALSE)) %>%
+    formatRound("change",1)
+
+```
+
+The following sentences convey the same information as the table above in a different format for those who prefer written statements.
+
+<details>
+
+<summary>[**Click here to display sentences**]{style="color:purple;"}</summary>
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+
+thresh.df %>%
+    mutate(#sentence_short = glue("{studentgroup.long}  of {currdenom}"),
+            sentence_full = ifelse(indicator %in% c("ela","math"),
+            glue("*{studentgroup.long}* student group should have an average of {thresh} from standard or higher based on the **{indicator}** CAASPP exam to not be in Red."),
+                glue("*{studentgroup.long}* student group should have {pass.count} {comper} students **{adjective}** based on the count in 2022 of {currdenom} to not be in Red.")
+    )
+    ) %>%
+    arrange(studentgroup.long,indicator) %>%
+    pull(sentence_full) %>%
+    unlist() %>%
+    unname() %>%
+    as.vector() # %>%
+#    cat(paste('- ', .), sep = '\n')
+  #  cat(paste0("- ",.[[1]], "\n"))
+
+
+
+
+```
+
+</details>
+
+------------------------------------------------------------------------
+
+This report was last updated at `r Sys.time()`.
+
+It was developed by [David Dobrowski](https://github.com/dobrowski) at the [Monterey County Office of Education](https://www.montereycoe.org/)
+
+![](icons/logo.png){fig-align="right" width="20%"}
