@@ -26,15 +26,6 @@ Note: This initial list of CDS codes is schools and districts within the SoCal G
 with open("cdsmry.txt", "rt") as f:
     cds_codes = f.read().splitlines()
 
-"""# This code is temporary, and added to filter only for Riverside County. Feel free to comment out.
-cds_codes = [i for i in cds_codes if i[0:2] == '33']
-"""
-
-"""# Open requests to get the file
-
-
-"""
-
 s = requests.Session()
 
 all_results = []
@@ -44,18 +35,13 @@ total = len(cds_codes)
 for i in cds_codes:
     progress += 1
     results = s.get(
-        f"https://caschooldashboard-staging-api-west.azurewebsites.net/Reports/{i}/9/StudentGroups/1-2-3-4-5-6-7"
+        f"https://caschooldashboard-staging-api-west.azurewebsites.net/Reports/{i}/10/StudentGroups/1-2-3-4-5-6-7-8"
     )
     data_dict = json.loads(results.text)
     for j in data_dict:
         indicatorResults = j["primary"]["list"]
         all_results.extend(indicatorResults)
     print(f"{i} complete: {progress}/{total}")
-
-"""# Results file
-
-The results file can be downloaded for further transformation.
-"""
 
 results_df = pd.DataFrame.from_dict(all_results)
 results_df.to_csv("all_results.csv")
@@ -120,3 +106,4 @@ scrape_prepared <- scrape_data %>%
 write_excel_csv(
         scrape_prepared, 'scrape_prepared.csv'
     )
+
