@@ -41,12 +41,12 @@ for(i in da.dists){
     #              execute_dir = "output",
                 input = "DashboardSummary.qmd",
 
-                  output_file = paste0("Dashboard2023Summary", dist, ".html" ) ,
+                  output_file = paste0("Dashboard2024Summary", dist, ".html" ) ,
                   execute_params = dist,
     )
     
-   file.rename(from = paste0("Dashboard2023Summary", dist, ".html" ),
-               to = here("output", paste0("Dashboard2023Summary", dist, ".html" ))  )
+   file.rename(from = paste0("Dashboard2024Summary", dist, ".html" ),
+               to = here("output", paste0("Dashboard2024Summary", dist, ".html" ))  )
     
 }
 

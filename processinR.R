@@ -1,4 +1,7 @@
 
+# Used to process the data scraped from the preview site using the python script
+
+
 library(tidyverse)
 stu_groups <- c("ALL", "SED", "EL", "LTEL7", "FOS", "HOM", "SWD", "AA", "AI", "AS", "FI", "HI", "MR", "PI", "WH")
 
@@ -129,5 +132,11 @@ tsi <- complete.data.step %>%
     
     ) %>%
     filter(School != "No Data")
+
+
+tsi %>% 
+    filter(atsi == TRUE) %>%
+    write.csv("potential tsi.csv")
+
 
 ### End ----
