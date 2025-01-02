@@ -1,5 +1,5 @@
 ---
-title: "Index of Dashboard 2023 Summary Webpages"
+title: "Index of Dashboard 2024 Summary Webpages"
 format: 
     html:
         theme: pulse
@@ -10,7 +10,7 @@ format:
 editor: visual
 ---
 
-The following lists provide links to the Dashboard Summary web pages developed by MCOE based for Level 2 support based on data from CDE. For last year's webpages, please see <https://da-monterey.netlify.app/>
+The following lists provide links to the Dashboard Summary web pages developed by MCOE based for Level 2 support based on data from CDE. For last year's webpages, please see <https://montereydashboard2023.netlify.app/>
 
 ```{r}
 #| include: false
@@ -35,7 +35,7 @@ da.dists <- dash.mry.da.details %>%
 index.tbl <- tibble(cds = da.dists) %>%
     rowwise() %>%
     mutate(dist.name = mcoe_name(cds),
-           url = paste0("<a href='","https://montereydashboard2023.netlify.app/output/","dashboard2023summary", cds, ".html","'>","https://montereydashboard2023.netlify.app/output/","dashboard2023summary", cds, ".html","</a>"  ) ) %>%
+           url = paste0("<a href='","https://montereydashboard2024.netlify.app/output/","dashboard2024summary", cds, ".html","'>","https://montereydashboard2024.netlify.app/output/","dashboard2024summary", cds, ".html","</a>"  ) ) %>%
     select(-cds)
 
 # atsi.cde.mry.michelle <- read_rds("atsi list michelle.rds")
@@ -45,8 +45,8 @@ index.tbl <- tibble(cds = da.dists) %>%
 essa_mry <- read_rds("essa_mry.rds")
 
 essa.tbl <- essa_mry %>%
-    select(cds,districtname, schoolname, AssistanceStatus2023) %>%
-    mutate(url = paste0("<a href='","https://montereydashboard2023.netlify.app/output/","DashboardSummary", cds, ".html","'>","https://montereydashboard2023.netlify.app/output/","DashboardSummary", cds, ".html","</a>"  ) )
+    select(cds,districtname, schoolname, AssistanceStatus2024) %>%
+    mutate(url = paste0("<a href='","https://montereydashboard2024.netlify.app/output/","DashboardSummary", cds, ".html","'>","https://montereydashboard2024.netlify.app/output/","DashboardSummary", cds, ".html","</a>"  ) )
 
 
 ```
@@ -69,9 +69,9 @@ datatable(index.tbl,
 
 ```
 
-## CSI/ATSI Schools
+## CSI/ATSI/TSI Schools
 
-The following lists provide links to the Dashboard Summary web pages developed by MCOE based for CSI/ATSI support based on data from CDE.
+The following lists provide links to the Dashboard Summary web pages developed by MCOE based for CSI/ATSI/TSI support based on data from CDE.
 
 ```{r}
 #| echo: false
@@ -79,7 +79,7 @@ The following lists provide links to the Dashboard Summary web pages developed b
 
 datatable(essa.tbl,
           colnames = c("CDS", "District", "School","URL"),
-          caption = "List of Schools in CSI and ATSI",
+          caption = "List of Schools in CSI, ATSI and TSI",
           rownames = FALSE,
           options = list(lengthChange = FALSE,
                          searching = TRUE),
