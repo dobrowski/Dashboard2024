@@ -11,8 +11,8 @@ editor: visual
 toc: true
 toc-location: left
 params:
-    dist: '27660506026124'
-    yr: 2023
+    dist: '27738256026421'
+    yr: 2024
 ---
 
 ```{r}
@@ -33,6 +33,7 @@ library(ggtext)
 library(glue)
 library(scales)
 library(DT)
+library(ggpattern)
 
 
 options(scipen=999)
@@ -47,6 +48,8 @@ dist.name <- mcoe_name(cds.dist)
 
 
 yr <- params$yr
+
+yr.curr <- params$yr
 
 con <- MCOE::mcoe_sql_con()
 
@@ -67,13 +70,15 @@ source("dashboard-function.R", local = knitr::knit_global())
 
 dash.mry <- read_rds("dash-mry.rds")
 
+dash2 <- read_rds("dash-mry2.rds")
+
 dash.mry.da.details <- read_rds("dash_mry_da_details.rds")
 
 exit.crit <- read_rds("exit-crit.rds")
 
 essa_mry <- read_rds("essa_mry.rds")
 
-atsi.list <- read_rds("atsi_list.rds")
+# atsi.list <- read_rds("atsi_list.rds")
 
 school.name <- dash.mry %>%
     filter(cds == cds.school) %>%
@@ -551,13 +556,13 @@ title: "`r school.name` Dashboard Summary"
 
 ## Report Purpose
 
-This report is created to assist `r school.name` in reflecting on their student groups and how they relate to DA, CSI, and ATSI.
+This report is created to assist `r school.name` in reflecting on their student groups and how they relate to DA, CSI,  ATSI and TSI.
 
 ## Qualifying Groups
 
-Differentiated Assistance is determined by the California Dashboard. Colors reflect the latest available status from 2023.
+Differentiated Assistance is determined by the California Dashboard. Colors reflect the latest available status from `r yr`.
 
-```{r} 
+```{r}
 #| echo: false
 #| warning: false
 #| message: false
@@ -570,7 +575,6 @@ cat("The graphic below shows the color for each student group for each indicator
 
 ```
 
-
 ```{r}
 #| echo: false
 #| warning: false
@@ -578,14 +582,40 @@ cat("The graphic below shows the color for each student group for each indicator
 #| fig-width: 7
 #| fig-height: 8
 
+
+yr.curr <- yr
+
+
+
+
 dash.mry %>%
  #       mutate(statuslevel = statuslevel.orig) %>%
     dash.graph(dist.name, grouping = "D") 
 
+
+
+da.groups <- dash.mry.da.details %>%
+    filter(cds == cds.dist) %>%
+    select(studentgroup) %>%
+    unique() %>%
+    unlist()
+
+
+
+da.inds <- dash.mry.da.details %>%
+    filter(cds == cds.dist) %>%
+    select(indicator) %>%
+ #   filter(indicator != "CCI") %>% # Only for 2023 since no history to compare
+    unique() %>%
+    unlist()
+
+
+
+
+
 ```
 
-
-```{r} 
+```{r}
 #| echo: false
 #| warning: false
 #| message: false
@@ -610,9 +640,9 @@ dash.mry %>%
 
 ```
 
-## CSI/ATSI Designations
+## CSI/ATSI/TSI Designations
 
-Under ESSA, schools can be identified for Comprehensive Support and Improvement (CSI) or Additional Targeted Support and Improvement (ATSI). CSI is based on a school's overall or All Students indicators, whereas ATSI is based on each student group's indicators. For more information please see: [CDE School Support](https://www.cde.ca.gov/sp/sw/t1/schoolsupport.asp). It is important to note that calculations are only based on student groups with 30 or more students.
+Under ESSA, every third year schools can be identified for Comprehensive Support and Improvement (CSI) or Additional Targeted Support and Improvement (ATSI). In the other years schools can be identified for Targeted Support and Improvement (TSI).  CSI is based on a school's overall or All Students indicators, whereas ATSI and TSI are based on each student group's indicators. For more information please see: [CDE School Support](https://www.cde.ca.gov/sp/sw/t1/schoolsupport.asp). It is important to note that calculations are only based on student groups with 30 or more students.
 
 ```{r}
 #| echo: false
@@ -622,10 +652,29 @@ essa.tbl <- essa_mry %>%
     filter(cds == cds.school) 
 
 
-atsi.who <- atsi.list %>%
-    filter(cds == cds.school)
+essa.groups <- essa_mry %>%
+    filter(cds == cds.school) %>%
+    select(cds, AA:WH) %>%
+    pivot_longer(cols = c(AA:WH)) %>%
+    filter(value != 0) %>%
+    select(name) %>%
+    unique() %>%
+    unlist()
 
-atsi.words <- if ( length( atsi.who$definition) > 0 ) paste0(combine_words( atsi.who$definition), " students have been identified as meeting ATSI criteria.") else paste0(" ")
+
+essa.inds <- dash.mry %>%
+    filter(cds == cds.school,
+        studentgroup %in%  essa.groups,
+        color == 1) %>%
+    select(indicator) %>%
+    unique() %>%
+    unlist()
+
+
+# atsi.who <- atsi.list %>%
+#     filter(cds == cds.school)
+# 
+ atsi.words <- if ( length( essa.groups) > 0 ) paste0(", ",combine_words( essa.groups), " students have been identified as meeting ATSI/TSI criteria.") else paste0(".")
 
 
 # %>%
@@ -671,9 +720,8 @@ atsi.words <- if ( length( atsi.who$definition) > 0 ) paste0(combine_words( atsi
 
 ```
 
-`r if_else (length( essa.tbl$cds) == 0, paste0(school.name," is not eligible for ATSI or CSI."), paste0(school.name," is eligible for ",essa.tbl$AssistanceStatus2023,".") )`
+`r if_else (length( essa.tbl$cds) == 0, paste0(school.name," is not eligible for ATSI, TSI or CSI."), paste0(school.name," is eligible for ",essa.tbl$AssistanceStatus2024,atsi.words) )`
 
-`r atsi.words`
 
 ## Status Details for all Indicators
 
@@ -713,92 +761,89 @@ print(p)
 
 </details>
 
-## Historical Graphs for Eligible Groups
 
-These graphs represent all of the indicators from Priority Areas that qualified the district for DA or school for ATSI. They included all DA qualifying student groups and student groups qualify for ATSI on each graph. In addition, the All Students group is included in all graphs for comparisons.
+## Status Details for all Indicators Side-by-Side
+
+These graphs represent all of the indicators from the Dashboard and show how each of the student groups performed in `r yr` and `r yr-1`.
 
 <details>
 
-<summary>[**Click here to display graphs**]{style="color:purple;"}</summary>
+<summary>[**Click here to display graphs**]{style="color:pink;"}</summary>
 
 ```{r}
 #| echo: false
 #| warning: false
-#| fig-width: 7
+#| fig-width: 9
+#| fig-height: 8
+
+indicator.list <- dash2 %>%
+        filter(cds == cds.school,
+               !is.na(currstatus)) %>%
+    select(indicator) %>%
+    filter(!str_detect(indicator,"CENSUS")) %>%
+    unique() %>%
+    unlist()
+
+for (i in indicator.list) {
+
+p <- candy.comp(dash2, school.name, i)+
+  theme(plot.margin = margin(t = 5, r = 10, b = 5, l = 5, unit = "pt"))
+    
+print(p)
+
+}    
+
+# indicator.bar(dash2, dist.name, "ela")
+
+```
+
+</details>
+
+## Historical Confetti
+
+These graphs represent all of the indicators from Priority Areas that qualified the district. They included all qualifying subgroups on each graph, whether this was a qualifying indicator or not, as well as the All Students group for comparisons.
+
+<details>
+
+<summary>[**Click here to display graphs**]{style="color:orange;"}</summary>
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 9
 #| fig-height: 6
 
 
-da.inds <- dash.mry.da.details %>%
-    filter(cds == cds.dist) %>%
-    select(indicator) %>%
-    filter(indicator != "CCI") %>% # Only for 2023 since no history to compare
-    unique() %>%
-    unlist()
+
+da.essa.groups <- c(da.groups, essa.groups, "ALL" )
+
+dash2.da.groups <- dash2 %>%
+    filter(studentgroup %in%  da.essa.groups)
+
+da.essa.inds <- c(da.inds, essa.inds) %>% unique()
+
+
+for (i in da.essa.inds) {
+  # Attempt the operation inside tryCatch
+  result <- tryCatch({
+p <- 
+confetti(df = dash2.da.groups,
+         dist = school.name,
+         indie = i,
+         grouping = "S")
 
 
 
-da.groups <- dash.mry.da.details %>%
-    filter(cds == cds.dist) %>%
-    select(studentgroup) %>%
-    unique() %>%
-    unlist()
-
-
-csi.list <- dash.mry %>%
-    filter(cds %in% essa.tbl$cds,
-        reportingyear == 2023,
-           rtype == "S",
-           color == 1,
-           (studentgroup == "ALL" | indicator == "ELPI")
-           )
-
-atsi.mry <- essa.tbl %>%
-    filter( str_detect(AssistanceStatus2023, "ATSI")) %>%
-    pivot_longer(cols = AA:WH, names_to = "studentgroup") %>%
-    select(cds, districtname, schoolname, studentgroup, value) %>%
-    filter(value >= 1) %>%
-    select(-value)
-
-atsi.dash <- dash.mry %>%
-    filter(reportingyear == max(reportingyear) ,
-           cds %in% atsi.mry$cds,
-            !is.na(indicator) ) %>%
-    select(cds, studentgroup, indicator, color, statuslevel) %>%
-    mutate(color = case_when(indicator == "CCI" & statuslevel == 1 ~ 1, 
-                              indicator == "CCI" & statuslevel != 1 ~ 0,
-                              TRUE ~ color)
-           ) %>%
-    filter(color >= 1)
-
-
-
-
-
-atsi.groups <- atsi.mry %>%
-    select(studentgroup) %>%
-    distinct() %>%
-    unlist()
-
-da.atsi.groups <- c(da.groups,atsi.groups) %>% unique()
-
-
-da.atsi.inds <- c(csi.list$indicator, atsi.dash$indicator, da.inds) %>% unique()
-
-
-dash.mry.school <- dash.mry %>%
-    filter(cds == cds.school)
-
-
-for (i in da.atsi.inds) {
-    
-p <- hist.lines(df = dash.mry.school,
-                group = c("ALL",da.atsi.groups),
-                indie = i)
-
-print(p)    
-
+print(p)
+      
+      
+      
+  }, error = function(e) {
+    message("The indicator ", i, " does not have any data.")
+    NULL  # Return NULL (or anything else) to continue the loop
+  })
+  
 }
-
 
 
 
@@ -806,6 +851,8 @@ print(p)
 ```
 
 </details>
+
+
 
 ## Status Needed to Avoid Red in 2024
 
