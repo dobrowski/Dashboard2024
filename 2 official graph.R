@@ -1159,13 +1159,13 @@ run.everything.schools("Carmel")
 ### CSI/AtSI list for webpages 
 
 
-essa_all <- read_excel(here("data","essaassistance23.xlsx"), 
-                      sheet = "2023-24 ESSA State Schools",
+essa_all <- read_excel(here("data","essaassistance24.xlsx"), 
+                      sheet = "2024-25 ESSA State Schools",
                       range = "A3:AI9949")
 
 essa_mry <- essa_all %>%
     filter( str_extract(cds, "[1-9]{1,2}") == 27,
-            str_detect(AssistanceStatus2023, "CSI|ATSI")) # %>%
+            str_detect(AssistanceStatus2024, "CSI|ATSI|TSI")) # %>%
 #    mutate(cds = paste0(str_extract(cds, "[0-9]{1,7}"),"0000000"  )) # This will need to be updated in future years for charter CSI
 
 
