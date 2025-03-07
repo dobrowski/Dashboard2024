@@ -629,3 +629,113 @@ confetti <- function(df, dist, indie, grouping = "D") {
     
 }
 
+
+
+
+
+
+confetti.studentgroup <- function(df, dist, studentgrup, grouping = "D") {
+    
+    
+    
+    # 
+    # tit <- case_when(indie == "MATH" ~ "Math",
+    #                  indie == "CHRO" ~ "Chronic Absenteeism",
+    #                  indie == "CCI" ~ "College Career Readiness",
+    #                  indie == "GRAD" ~ "Graduation Rate",
+    #                  indie == "ELPI" ~ "English Language Progress",
+    #                  indie == "ELA" ~ "ELA",
+    #                  indie == "SCIENCE" ~ "Science",
+    #                  indie == "SUSP" ~ "Suspension",
+    #                  TRUE ~ indie) 
+    # 
+    # subtit <- case_when(indie == "MATH" ~ "Distance from Standard",
+    #                     indie == "CHRO" ~ "",
+    #                     indie == "GRAD" ~ "",
+    #                     indie == "CCI" ~ "",
+    #                     indie == "ELPI" ~ "Percent of EL students who improve on the ELPAC",
+    #                     indie == "ELA" ~ "Distance from Standard",
+    #                     indie == "SCIENCE" ~ "Distance from Standard",
+    #                     indie == "SUSP" ~ "Percent of students suspended at least 1 full day",
+    #                     #    TRUE ~ indie
+    # ) 
+    # 
+    
+    
+    df.working <-    df %>%
+        { if(grouping == "S" ) filter(., str_detect(schoolname,dist),
+                                      rtype == "S") 
+            else filter(., str_detect(districtname,dist),
+                        rtype == "D")} %>%
+        
+        filter( 
+            studentgroup == studentgrup,
+            statuslevel != 0,
+     #       !is.na(studentgroup.long)
+            ) %>%
+        mutate(reportingyear = factor(reportingyear),
+               EstimatedColor =  case_when(
+                   color == 0 ~ "grey60",
+                   color == 1 ~ "firebrick",
+                   color == 2 ~ "chocolate1",
+                   color == 3 ~ "gold1", 
+                   color == 4 ~ "springgreen3",
+                   color == 5 ~ "royalblue3", 
+                   reportingyear == 2022 &  currdenom < 30 ~ "grey60",
+                   reportingyear == 2022 &  statuslevel == 1 ~ "firebrick",
+                   reportingyear == 2022 &   statuslevel == 2 ~ "chocolate1",
+                   reportingyear == 2022 &    statuslevel == 3 ~ "gold1", 
+                   reportingyear == 2022 &    statuslevel == 4 ~ "springgreen3",
+                   reportingyear == 2022 &   statuslevel == 5 ~ "royalblue3" 
+               )
+        )
+    
+    
+    work.group <- df.working %>%
+        select(indicator) %>%
+        unique() %>%
+        flatten()
+    
+    
+    df.working %>%
+        mutate(reportingyear = factor(reportingyear),
+               #  color = factor(color)
+        ) %>%
+        filter(studentgroup == studentgrup) %>%
+        
+        ggplot( aes(x= reportingyear, 
+                    y = currstatus, 
+                    group = studentgroup.long, 
+                    #     colour = Group,
+                    label = currstatus
+                    # label = labby
+        )
+        ) +
+        geom_line(size = 2, 
+                  color = "grey40") +
+        geom_point(size = 5, aes(color = EstimatedColor)) +
+        expand_limits(y = 0) +
+        geom_text(color = "black",
+                  vjust = -1) +
+        geom_blank( aes(x=reportingyear, y=currstatus*1.2, label=currstatus)) +
+        scale_color_identity() +
+        #  scale_color_manual(values = color.pal) +
+        mcoe_theme +
+        #       scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+        facet_wrap(~indicator, scales = "free") +
+        
+        theme(panel.border = element_rect(fill=NA,color="darkgrey", size=0.5, 
+                                          linetype="solid"),
+              strip.background = element_rect(color="black", size=0.5, linetype="solid"  )
+              
+        )+  # Adds a border around each panel
+        theme(legend.position = "none")  +
+        labs(title = paste0(dist," - ",studentgrup, " Rates Over Time"),
+             subtitle = "From 2021-22 through 2023-24 school years"
+    #         y = subtit
+        )
+    
+    
+    
+}
+

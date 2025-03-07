@@ -35,3 +35,35 @@ charter.tier <- scrape_data %>%
     mutate(oasis.diff = `27102726119663` - `00000000000000`,
            home.diff = `27102722730232` - `00000000000000`
     )
+
+
+
+
+#### Home Chart er Confetti ------
+
+
+
+        confetti(df = dash2,
+                 dist = "Monterey County Home Charter",
+                 indie = "CHRO",
+                 grouping = "S")
+
+
+ggsave(here('figs',"Home Charter","Home Charter CHRO confetti.png"), width = 16, height = 9)    
+
+
+
+
+
+
+
+confetti(df = dash2,
+         dist = "Oasis Charter",
+         indie = "ELA",
+         grouping = "S")
+
+
+ggsave(here('figs',"Oasis","Oasis ELA confetti.png"), width = 16, height = 9)    
+
+
+
