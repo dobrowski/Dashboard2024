@@ -220,9 +220,12 @@ student.long <-    sg.desc %>%
     
 }
 
-da.plot.group("Math", group = "SWD",  weighting = "Not weighted")
+da.plot.group("Math", group = "SWD",  weighting = "Not weighted") +
+  labs(y = "Scale Score Points\nAverage Change",
+       title = "")
 
 
+ggsave(here("output","DAvsNONv2", paste0("SWD"," ", "Math"," ", "Not weighted", ".png")), width = 9, height =  6)
 
 
 

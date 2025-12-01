@@ -12,7 +12,7 @@ toc: true
 toc-location: left
 params:
     dist: '27661590000000'
-    yr: 2024
+    yr: 2025
 ---
 
 ```{r}
@@ -181,7 +181,7 @@ da.groups <- dash.mry.da.details %>%
 
 da.status <- dash.mry.da %>%
     filter(CDS == dist) %>%
-    select(AssistanceStatus2024) %>%
+    select(AssistanceStatus2025) %>%
     unique() %>%
     unlist()
 
@@ -245,46 +245,9 @@ print(p)
 
 </details>
 
-## Status Details for all Indicators Side-by-Side
-
-These graphs represent all of the indicators from the Dashboard and show how each of the student groups performed in `r yr` and `r yr-1`.
-
-<details>
-
-<summary>[**Click here to display graphs**]{style="color:pink;"}</summary>
-
-```{r}
-#| echo: false
-#| warning: false
-#| fig-width: 9
-#| fig-height: 8
-
-indicator.list <- dash2 %>%
-        filter(cds == dist,
-               !is.na(currstatus)) %>%
-    select(indicator) %>%
-    filter(!str_detect(indicator,"CENSUS")) %>%
-    unique() %>%
-    unlist()
-
-for (i in indicator.list) {
-
-p <- candy.comp(dash2, dist.name, i)+
-  theme(plot.margin = margin(t = 5, r = 10, b = 5, l = 5, unit = "pt"))
-    
-print(p)
-
-}    
-
-# indicator.bar(dash2, dist.name, "ela")
-
-```
-
-</details>
-
 ## Historical Confetti
 
-HOLDING SPACE FOR NOW These graphs represent all of the indicators from Priority Areas that qualified the district. They included all qualifying subgroups on each graph, whether this was a qualifying indicator or not, as well as the All Students group for comparisons.
+These graphs represent all of the indicators from Priority Areas that qualified the district. They included all qualifying subgroups on each graph, whether this was a qualifying indicator or not, as well as the All Students group for comparisons.
 
 <details>
 
